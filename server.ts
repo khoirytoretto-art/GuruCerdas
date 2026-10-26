@@ -1384,7 +1384,11 @@ async function startServer() {
   });
 
   // --- VITE MIDDLEWARE OR STATIC SERVING ---
-  if (!isProd) {
+  const distPath = path.resolve(__dirname, 'dist');
+  const hasDist = fs.existsSync(distPath) && fs.existsSync(path.resolve(distPath, 'index.html'));
+
+  if (!isProd || !hasDist) {
+    console.log('[AsistenGuru Server] Menggunakan Vite dev/middleware mode.');
     const vite = await createViteServer({
       server: {
         middlewareMode: true,
@@ -1394,18 +1398,11 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.resolve(__dirname, 'dist');
-    if (fs.existsSync(distPath)) {
-      app.use(express.static(distPath));
-      app.get('*', (_req, res) => {
-        res.sendFile(path.resolve(distPath, 'index.html'));
-      });
-    } else {
-      console.error(`[AsistenGuru Server] Folder dist TIDAK DITEMUKAN di ${distPath}. Pastikan build sudah dijalankan.`);
-      app.get('*', (_req, res) => {
-        res.status(500).send('Aplikasi belum di-build. Silakan hubungi admin.');
-      });
-    }
+    console.log('[AsistenGuru Server] Menggunakan static serving dari folder dist.');
+    app.use(express.static(distPath));
+    app.get('*', (_req, res) => {
+      res.sendFile(path.resolve(distPath, 'index.html'));
+    });
   }
 
   const server = app.listen(Number(PORT), HOST, () => {
